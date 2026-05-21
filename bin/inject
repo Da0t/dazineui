@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# dazineui inject — copies a primitive into the current project and installs deps.
+#
+# Usage: inject <primitive-name> [target-dir]
+#
+# Examples:
+#   inject flow-gradient
+#   inject flow-gradient ./src/components/ui
+#   ~/.claude/skills/dazineui/bin/inject hero-scene ./components
+
+set -e
+
+PRIMITIVE="${1:-}"
+TARGET_DIR="${2:-./components/ui}"
+SKILL_ROOT="${DAZINEUI_ROOT:-$HOME/.claude/skills/dazineui}"
+PRIMITIVE_SRC="$SKILL_ROOT/lib/motion/$PRIMITIVE"
+
+if [ -z "$PRIMITIVE" ]; then
+  echo "Usage: inject <primitive-name> [target-dir]"
+  echo ""
+  echo "Available primitives:"
+  for d in "$SKILL_ROOT/lib/motion"/*/; do
+    echo "  $(basename "$d")"
+  done
+  exit 1
+fi
+
+if [ ! -d "$PRIMITIVE_SRC" ]; then
+  echo "Error: primitive '$PRIMITIVE' not found at $PRIMITIVE_SRC"
+  echo ""
+  echo "Available primitives:"
+  for d in "$SKILL_ROOT/lib/motion"/*/; do
+    echo "  $(basename "$d")"
+  done
+  exit 1
+fi
+
+DEST="$TARGET_DIR/$PRIMITIVE"
+
+echo "→ Copying $PRIMITIVE to $DEST"
+mkdir -p "$DEST"
+
+# Copy all source files except MANIFEST.md, deps.json, PREVIEW.png (those are metadata)
+rsync -a --exclude='MANIFEST.md' --exclude='PREVIEW.png' "$PRIMITIVE_SRC/" "$DEST/"
+
+# Install npm dependencies if deps.json exists
+DEPS_FILE="$PRIMITIVE_SRC/deps.json"
+if [ -f "$DEPS_FILE" ] && command -v node >/dev/null 2>&1; then
+  echo "→ Installing dependencies for $PRIMITIVE"
+
+  # Extract dependency names and versions using node
+  DEPS=$(node -e "
+    const d = require('$DEPS_FILE');
+    const deps = Object.entries(d.dependencies || {}).map(([k,v]) => k+'@'+v);
+    console.log(deps.join(' '));
+  " 2>/dev/null || echo "")
+
+  DEV_DEPS=$(node -e "
+    const d = require('$DEPS_FILE');
+    const deps = Object.entries(d.devDependencies || {}).map(([k,v]) => k+'@'+v);
+    console.log(deps.join(' '));
+  " 2>/dev/null || echo "")
+
+  if [ -n "$DEPS" ]; then
+    if command -v npm >/dev/null 2>&1 && [ -f "package.json" ]; then
+      npm install $DEPS --save 2>/dev/null || echo "  (npm install failed — install manually: npm install $DEPS)"
+    else
+      echo "  Manual install needed: npm install $DEPS"
+    fi
+  fi
+
+  if [ -n "$DEV_DEPS" ]; then
+    if command -v npm >/dev/null 2>&1 && [ -f "package.json" ]; then
+      npm install $DEV_DEPS --save-dev 2>/dev/null || echo "  (npm install failed — install manually: npm install -D $DEV_DEPS)"
+    else
+      echo "  Manual install needed: npm install -D $DEV_DEPS"
+    fi
+  fi
+fi
+
+echo ""
+echo "✓ $PRIMITIVE injected to $DEST"
+echo ""
+echo "Import it in your project:"
+
+# Detect framework style
+if [ -f "next.config.ts" ] || [ -f "next.config.js" ]; then
+  COMPONENT_NAME=$(node -e "
+    const name = '$PRIMITIVE'.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    console.log(name.charAt(0).toUpperCase() + name.slice(1));
+  " 2>/dev/null || echo "Component")
+  echo ""
+  echo "  // Next.js App Router (dynamic import required for R3F primitives):"
+  echo "  import dynamic from 'next/dynamic'"
+  echo "  const $COMPONENT_NAME = dynamic("
+  echo "    () => import('$TARGET_DIR/$PRIMITIVE').then(m => ({ default: m.$COMPONENT_NAME })),"
+  echo "    { ssr: false }"
+  echo "  )"
+else
+  echo ""
+  echo "  import { $(node -e "
+    const name = '$PRIMITIVE'.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    console.log(name.charAt(0).toUpperCase() + name.slice(1));
+  " 2>/dev/null || echo "Component") } from '$TARGET_DIR/$PRIMITIVE'"
+fi

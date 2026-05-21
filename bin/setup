@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# dazineui setup — installs dazineui globally for Claude Code and Cursor.
+#
+# Run once: npx dazineui setup
+#
+# What it does:
+#   1. Copies lib/motion, lib/shaders, lib/hooks, lib/tokens, bin/, SKILL.md, MANIFEST.md
+#      to ~/.claude/skills/dazineui/ (Claude Code global skill directory)
+#   2. Mirrors to ~/.cursor/skills/dazineui/ (Cursor global skill directory)
+#   3. Both directories are read automatically by the AI in every project.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+CLAUDE_DEST="$HOME/.claude/skills/dazineui"
+CURSOR_DEST="$HOME/.cursor/skills/dazineui"
+
+echo ""
+echo "dazineui setup"
+echo "──────────────"
+echo ""
+
+install_to() {
+  local dest="$1"
+  local label="$2"
+
+  echo "→ Installing to $dest ($label)"
+  mkdir -p "$dest"
+
+  # Copy the AI skill layer
+  cp "$REPO_ROOT/SKILL.md" "$dest/SKILL.md"
+  cp "$REPO_ROOT/MANIFEST.md" "$dest/MANIFEST.md"
+
+  # Copy primitive library
+  echo "  → Copying primitives..."
+  mkdir -p "$dest/lib"
+  rsync -a --delete "$REPO_ROOT/lib/" "$dest/lib/"
+
+  # Copy bin scripts
+  echo "  → Copying scripts..."
+  mkdir -p "$dest/bin"
+  rsync -a "$REPO_ROOT/bin/" "$dest/bin/"
+  chmod +x "$dest/bin/"*
+
+  # Set DAZINEUI_ROOT env in the installed inject script
+  sed -i.bak "s|DAZINEUI_ROOT:-\$HOME/.claude/skills/dazineui|DAZINEUI_ROOT:-$dest|g" \
+    "$dest/bin/inject" 2>/dev/null || true
+  rm -f "$dest/bin/inject.bak"
+
+  echo "  ✓ Done"
+}
+
+install_to "$CLAUDE_DEST" "Claude Code"
+echo ""
+install_to "$CURSOR_DEST" "Cursor"
+
+echo ""
+echo "✓ dazineui installed globally"
+echo ""
+echo "  Claude Code: $CLAUDE_DEST"
+echo "  Cursor:      $CURSOR_DEST"
+echo ""
+echo "Every AI session in every project now has dazineui in context."
+echo "No per-project setup needed."
+echo ""
+echo "To inject a primitive into a project:"
+echo "  cd your-project"
+echo "  ~/.claude/skills/dazineui/bin/inject flow-gradient ./components/ui"
+echo ""
+echo "Primitives available:"
+for d in "$REPO_ROOT/lib/motion"/*/; do
+  name=$(basename "$d")
+  [ "$name" = ".gitkeep" ] && continue
+  echo "  • $name"
+done
+echo ""

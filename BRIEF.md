@@ -1,4 +1,4 @@
-Motion Layer for AI-Assisted Web Development
+dazineui — Motion Layer for AI-Assisted Web Development
 Complete Project Documentation
 
 Table of Contents
@@ -45,7 +45,7 @@ The aesthetic floor moves from "generic Bootstrap site" to "senior Three.js deve
 
 3. How It Works
 The end-user flow is intentionally minimal.
-A developer is working in their IDE — Visual Studio Code with the Claude Code extension, Cursor, Windsurf, or any other tool that reads markdown configuration files. They have a project, either new or existing. They install this tool, either by running npx create-[toolname] my-site to scaffold a fresh project, or npx [toolname] add to drop the relevant files into an existing one. The install does three things: copies the lib/motion/ directory with all primitives, writes the CLAUDE.md (and mirrors), and sets up the token parsing logic in lib/tokens/.
+A developer is working in their IDE — Visual Studio Code with the Claude Code extension, Cursor, Windsurf, or any other tool that reads markdown configuration files. They have a project, either new or existing. It doesn't matter what stage it's in. They run npx dazineui setup once. That's the entire install step. The command writes the AI skill layer to ~/.claude/skills/dazineui/ (for Claude Code and Claude Code-compatible agents) and ~/.cursor/skills/dazineui/ (for Cursor). It stores the six primitives, their MANIFESTs, and the global instruction rules globally on the machine — not inside any specific project. From that point forward, every IDE session in every project automatically has dazineui in context. No per-project setup. No package.json entry. No import statements. Just: install once, works everywhere.
 From that point forward, the developer interacts with their AI assistant normally. They don't have to remember the tool exists. They just prompt: "Add a hero section that feels like a modern AI startup landing page."
 Internally, the AI assistant — let's say Claude Code — reads CLAUDE.md automatically because that's how Claude Code's context loading works. The file tells Claude that this project uses a motion library, that there are hard rules about what not to generate, and that the decision flow for visual requests is to scan lib/motion/*/MANIFEST.md files for matches before generating any new code.
 Claude opens each MANIFEST.md and reads the descriptors. Each manifest describes what the primitive looks like, what user prompts it maps to, what props it accepts, and what visual references it draws from. Claude identifies HeroScene as the match for "modern AI startup landing page" — the manifest explicitly mentions that pattern. Claude imports HeroScene from lib/motion/hero-scene/. It checks for a DESIGN.md in the project root. If found, it pulls the color tokens and passes them as props. If not, it uses the safe defaults defined in lib/tokens/defaults.ts. It picks the gradient-orb preset because that's the closest match to the "AI startup" descriptor in the manifest. It writes the component invocation into the user's app/page.tsx file.
@@ -65,7 +65,7 @@ The person this tool is built for, first and foremost, is me — the original au
 
 5. What It Is (and Isn't)
 Clarity about scope is critical for a project like this, because the surrounding ecosystem is crowded and it's easy to drift into someone else's lane.
-It is a motion and 3D primitive library plus AI instruction layer.
+It is a globally-installed motion and 3D primitive library plus AI instruction layer — installed once per machine, active in every project automatically.
 It is not a no-code site generator. It produces no output without a developer in the loop using an AI assistant to invoke it. There is no "describe a site and get a site" mode. Tools like Lovable, Bolt, v0, and Replit Agent occupy that space and they're well-funded incumbents. Competing with them would be a losing battle and isn't the goal.
 It is a complement to the DESIGN.md ecosystem.
 It is not another DESIGN.md library. The space of "drop a markdown file in your project root so your AI applies consistent styling" is already saturated. As of mid-2026, freedesignmd hosts over 120 systems, designmd.app hosts 454, getdesign.md hosts 69 brand-inspired files, and VoltAgent's awesome-design-md GitHub repository is a community standard. Google introduced DESIGN.md as an open format. Building another one would be redundant. Instead, this tool plugs into whichever DESIGN.md the user already has — reading their color tokens, typography, and spacing — and adds the motion layer that all of those DESIGN.md libraries explicitly don't yet cover.
@@ -111,69 +111,73 @@ Each primitive lives in its own folder under lib/motion/. Each folder contains t
 When the project grows beyond v1, additional primitives will be added based on real usage gaps — places where AI assistants had to generate from scratch because no primitive fit. Likely candidates for v2 and beyond: bento grid layouts with built-in motion, marquee/ticker strips, image distortion effects, animated SVG illustrations, fluid simulation backgrounds, page transition primitives. But none of those are in v1 scope. Six primitives, each polished to ship-quality, is the v1 bar.
 
 8. The Repository Structure
-The repository is organized to be maximally legible both to humans navigating the codebase and to AI assistants reading it for context.
+The repository is organized into two parts: the source tree (this repo, on GitHub) and the installed global layout (what npx dazineui setup writes to the user's machine).
+
+Source repository:
 /
-├── app/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── globals.css
-│   └── primitives/
-│       ├── flow-gradient/page.tsx
-│       ├── hero-scene/page.tsx
-│       ├── scroll-scene/page.tsx
-│       ├── magnetic-cursor/page.tsx
-│       ├── interactive-text/page.tsx
-│       └── particle-field/page.tsx
-├── lib/
-│   ├── motion/
-│   │   ├── flow-gradient/
-│   │   │   ├── index.tsx
-│   │   │   ├── shader.ts
-│   │   │   ├── presets.ts
-│   │   │   ├── types.ts
-│   │   │   ├── PREVIEW.png
-│   │   │   └── MANIFEST.md
-│   │   ├── hero-scene/
-│   │   │   ├── index.tsx
-│   │   │   ├── scenes/
-│   │   │   │   ├── gradient-orb.tsx
-│   │   │   │   ├── wireframe-object.tsx
-│   │   │   │   └── particle-cloud.tsx
-│   │   │   ├── presets.ts
-│   │   │   ├── types.ts
-│   │   │   ├── PREVIEW.png
-│   │   │   └── MANIFEST.md
-│   │   ├── scroll-scene/
-│   │   ├── magnetic-cursor/
-│   │   ├── interactive-text/
-│   │   └── particle-field/
-│   ├── shaders/
-│   │   ├── noise.ts
-│   │   ├── easing.ts
-│   │   ├── color.ts
-│   │   └── README.md
-│   ├── hooks/
-│   │   ├── use-mouse.ts
-│   │   ├── use-scroll-progress.ts
-│   │   ├── use-reduced-motion.ts
-│   │   └── use-design-tokens.ts
-│   └── tokens/
-│       ├── parser.ts
-│       ├── defaults.ts
-│       ├── types.ts
-│       └── README.md
-├── CLAUDE.md
+├── primitives/
+│   ├── flow-gradient/
+│   │   ├── source.tsx
+│   │   ├── shader.ts
+│   │   ├── presets.ts
+│   │   ├── types.ts
+│   │   ├── deps.json
+│   │   ├── PREVIEW.png
+│   │   └── MANIFEST.md
+│   ├── hero-scene/
+│   │   ├── source.tsx
+│   │   ├── scenes/
+│   │   │   ├── gradient-orb.tsx
+│   │   │   ├── wireframe-object.tsx
+│   │   │   └── particle-cloud.tsx
+│   │   ├── presets.ts
+│   │   ├── types.ts
+│   │   ├── deps.json
+│   │   ├── PREVIEW.png
+│   │   └── MANIFEST.md
+│   ├── scroll-scene/
+│   ├── magnetic-cursor/
+│   ├── interactive-text/
+│   └── particle-field/
+├── shaders/
+│   ├── noise.ts
+│   ├── easing.ts
+│   └── color.ts
+├── hooks/
+│   ├── use-mouse.ts
+│   ├── use-scroll-progress.ts
+│   ├── use-reduced-motion.ts
+│   └── use-design-tokens.ts
+├── tokens/
+│   ├── parser.ts
+│   ├── defaults.ts
+│   └── types.ts
+├── bin/
+│   ├── setup              ← npx dazineui setup entry point
+│   └── inject             ← copies a primitive + installs deps into any project
+├── SKILL.md               ← the global AI instruction layer (what AI assistants read)
+├── MANIFEST.md            ← catalog of all available primitives
+├── CLAUDE.md              ← development rules for this repo itself
 ├── AGENTS.md
-├── .cursor/
-│   └── rules/
-│       └── motion-rules.mdc
+├── .cursor/rules/motion-rules.mdc
 ├── README.md
 ├── LICENSE
 ├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── next.config.ts
 └── BRIEF.md
+
+After npx dazineui setup, the following is written globally on the user's machine:
+
+~/.claude/skills/dazineui/      ← Claude Code reads this automatically in every project
+  SKILL.md                      ← global AI instruction layer
+  MANIFEST.md                   ← primitive catalog
+  primitives/                   ← all six primitive source files + MANIFESTs
+  shaders/                      ← shared GLSL utilities
+  hooks/                        ← shared React hooks
+  tokens/                       ← DESIGN.md parser and defaults
+  bin/inject                    ← copies a primitive into the current project on demand
+
+~/.cursor/skills/dazineui/      ← Cursor reads this automatically in every project
+  (same structure)
 
 The app/ directory contains Next.js pages. The root page.tsx is the project's home page and also functions as a live demo of every primitive composed together — a one-page showcase that doubles as documentation. Each primitive has a dedicated demo page under app/primitives/[slug]/ showing all its presets and configurations.
 The lib/motion/ directory is the heart of the library. Each primitive gets its own folder following the identical structure: an index.tsx exporting the React component, a presets.ts defining named configurations, a types.ts with the TypeScript prop definitions, a PREVIEW.png showing what the rendered output looks like, and a MANIFEST.md written for AI assistants to read.
@@ -187,7 +191,7 @@ BRIEF.md is a project-purpose document, kept in the repo root. It explains the p
 The CLAUDE.md file is the most important asset in the entire project. More important than any individual primitive. Without a good CLAUDE.md, the primitives are just a library — useful, but not transformative. With a good CLAUDE.md, the primitives become a system that fundamentally changes how AI assistants produce visual code.
 The file has five major sections.
 Section one: Hard rules. These are non-negotiable constraints that override any other instinct the AI might have. The rules forbid certain anti-patterns explicitly. No CSS keyframes for hero or feature elements — those must use primitives. No custom GLSL unless the user explicitly asks. No MeshStandardMaterial with default settings — it must be tuned, or MeshPhysicalMaterial should be preferred. No proprietary font names like Söhne, GT America, or Founders Grotesk. No Arial, Helvetica, Times New Roman, or Georgia as display fonts. Always apply post-processing to R3F scenes. Always respect prefers-reduced-motion. These rules are stated in absolute terms because softening them ("try to avoid...") leads to inconsistent compliance.
-Section two: Decision flow. This describes the step-by-step process the AI should follow when the user makes a request involving visual design. First, check for a DESIGN.md in the project root and parse its tokens. Second, scan every MANIFEST.md in lib/motion/ and read their descriptors. Third, if the user provided a screenshot, describe what's visible in the image (colors, motion type, layout structure) and match the description to MANIFEST descriptors. Fourth, identify the closest-matching primitive (or combination of primitives). Fifth, import the primitive and configure it via preset prop or named props, passing DESIGN.md tokens where applicable. Sixth, never reimplement a primitive's functionality inline — if it exists in the library, use it from there.
+Section two: Decision flow. This describes the step-by-step process the AI should follow when the user makes a request involving visual design. First, check for a DESIGN.md in the project root and parse its tokens. Second, read MANIFEST.md from ~/.claude/skills/dazineui/ and scan each primitive's individual MANIFEST.md for descriptors. Third, if the user provided a screenshot, describe what's visible in the image (colors, motion type, layout structure) and match the description to MANIFEST descriptors. Fourth, identify the closest-matching primitive (or combination of primitives). Fifth, run the inject script to copy the primitive source into the project and install its npm dependencies. Sixth, configure the component via preset prop or named props, passing DESIGN.md tokens where applicable. Never reimplement a primitive's functionality inline — if it exists in the library, inject and use it.
 Section three: Aesthetic defaults. When the AI must make decisions that aren't covered by the user's DESIGN.md or by a specific primitive's preset, fall back to these defaults. Dark theme base is #0a0a0a, not pure black. Hero timing is 600 to 900 milliseconds. Micro-interaction timing is 200 to 300 milliseconds. Easing is cubic-bezier(0.32, 0.72, 0, 1) — never the browser default. Spacing scale uses a 4-pixel base unit. Border radius tiers are 8px, 12px, 16px, and 24px. Fonts default to Geist Sans for display and Geist Mono for monospace, with Inter as fallback. These defaults encode taste decisions a senior designer would make automatically.
 Section four: Vague prompt routing. Users frequently say things like "make it pop," "feel premium," "more interesting," or "more dynamic." These are exactly the prompts where AI assistants produce the most slop, because there's no specific request to match. This section gives explicit routing for common vague phrases. "Make it pop" or "feel premium" routes to FlowGradient background plus InteractiveText for headlines. "Add animation here" routes by context — text-heavy sections get InteractiveText, card grids get MagneticCursor plus stagger reveals, hero sections get HeroScene. "Cool background" routes to FlowGradient with a preset matching the project palette. "More dynamic" routes to ScrollScene if there's room to scroll, otherwise to hover-based motion on existing elements. These routings prevent the AI from defaulting to generic CSS animations when faced with ambiguity.
 Section five: Anti-patterns and explicit prohibitions. A list of things the AI must never produce in this project. Default motion.div fade-ins everywhere. hover:scale-105 as a substitute for real motion. transition: all on CSS. Generic spinners or pulse animations as filler "movement." Plain spheres or cubes as 3D elements (always use the styled primitives). Default Three.js lighting (the gray-on-gray look that signals "tutorial code"). System fonts as primary display fonts. These are the AI's reflexive bad habits, called out explicitly so they get suppressed.
