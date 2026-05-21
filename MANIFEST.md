@@ -1,17 +1,21 @@
 # dazineui Primitive Catalog
 
-This file is the AI-readable catalog of all available primitives. Read it to
-understand what's available before deciding how to satisfy a visual request.
+AI-readable catalog of all available primitives. Before writing any visual motion
+or 3D code, check this file to see if a primitive already covers the need.
 
-Every primitive in this library is implemented at **senior Three.js designer level** —
-no blur-based tricks, no blurry gradients as stand-ins for real visual work. All
-motion has explicit geometry, materials, or shader logic driving it.
+**Install:** `npm install dazineui`
+**Import:** `import { FlowGradient, AuroraGradient, WaveGrid, ... } from 'dazineui'`
+**Next.js:** Wrap in `dynamic(..., { ssr: false })` — all primitives use Canvas/WebGL.
+
+Every primitive is implemented at **senior Three.js designer level** —
+no blur-based tricks, no CSS gradients as stand-ins for real visual work.
+All motion uses explicit geometry, materials, or shader logic.
 
 ---
 
 ## flow-gradient Family
 
-Five animated backgrounds. All dark-first. Three use R3F + WebGL; two use Canvas 2D.
+Six animated backgrounds. All dark-first. Four use R3F + WebGL; two use Canvas 2D.
 None use `filter: blur` or CSS gradients as their visual core.
 
 ---

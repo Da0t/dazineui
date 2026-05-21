@@ -23,12 +23,13 @@ This file defines strict behavior for AI agents working in this project.
 Follow this sequence in order:
 
 1. Check for `DESIGN.md` in project root and parse/derive usable color, typography, spacing, radius, and motion tokens.
-2. Scan `primitives/*/MANIFEST.md` files (when working in this repo) or `~/.claude/skills/dazineui/primitives/*/MANIFEST.md` (when working in a user's project) and read descriptors, use-cases, presets, and constraints.
+2. Read `MANIFEST.md` (in this repo, or in `node_modules/dazineui/MANIFEST.md`, or at `~/.claude/skills/dazineui/MANIFEST.md`) to see all available primitives, descriptors, use-cases, and presets.
 3. If a screenshot/mock reference is provided, describe visible traits first (palette, motion character, layout rhythm, visual hierarchy), then map those traits to manifest descriptors.
 4. Choose the closest matching primitive (or minimal composition of primitives).
-5. Configure via typed props and presets first. Pass DESIGN-driven tokens whenever possible.
-6. If a primitive exists for the requested effect, import and use it. Do not reimplement inline.
-7. If no primitive matches, generate new code only after proving no suitable primitive exists, and still follow this repo's aesthetic defaults and safety rules.
+5. Import from `dazineui` (npm package) if installed, or from `@/primitives/flow-gradient` if working in this repo.
+6. Configure via typed props and presets first. Pass DESIGN-driven tokens whenever possible.
+7. In Next.js App Router, always wrap primitive imports in `dynamic(..., { ssr: false })`.
+8. If no primitive matches, generate new code only after proving no suitable primitive exists, and still follow this repo's aesthetic defaults and safety rules.
 
 ## 3) Aesthetic Defaults (Fallbacks When Inputs Are Ambiguous)
 

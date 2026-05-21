@@ -1,68 +1,93 @@
 ---
 name: dazineui
-version: 1.0.0
+version: 0.1.0
 description: |
-  Motion and 3D primitive layer for AI-assisted web development. Gives AI coding
-  assistants a curated library of hand-crafted motion and 3D components so they
-  produce premium, design-forward UI instead of generic animation slop.
-  Install once globally. Works in every project at any stage.
+  npm package + AI skill layer that makes AI coding assistants produce senior-level
+  Three.js designs. Install once per project (npm install dazineui) or globally
+  (npx dazineui setup). The package ships hand-crafted WebGL primitives and drops
+  .cursor/rules/dazineui-motion.mdc automatically so AI knows what exists and how
+  to use it.
 triggers:
   - hero section
   - animated background
   - gradient background
   - 3D scene
-  - scroll animation
-  - magnetic cursor
   - particle background
   - make it look premium
   - make it pop
   - cinematic
-  - interactive text
   - flowing gradient
+  - wave animation
+  - neon effect
+  - aurora
+  - flow field
 ---
 
 # dazineui — Motion & 3D Primitive Layer
 
-You have access to a curated library of motion and 3D primitives. These are
-hand-crafted, mathematically-correct, performance-tuned React components that
-produce high-end visual effects. Use them instead of generating generic animation
-code from scratch.
+You have access to the dazineui primitive library. These are hand-crafted, senior-level
+Three.js / WebGL components. **Use them instead of writing animation code from scratch.**
 
-The primitives live at `~/.claude/skills/dazineui/primitives/`. When a user needs
-a visual effect, inject the matching primitive into their project with the inject
-script, then configure it via props.
+---
+
+## INSTALLING INTO A PROJECT
+
+If `dazineui` is not yet in the project's `package.json`, tell the user to run:
+
+```bash
+npm install dazineui
+```
+
+The postinstall script automatically drops `.cursor/rules/dazineui-motion.mdc`
+into the project. No other setup is required.
+
+### Next.js import (SSR-safe)
+
+```tsx
+import dynamic from 'next/dynamic'
+
+const FlowGradient = dynamic(
+  () => import('dazineui').then(m => ({ default: m.FlowGradient })),
+  { ssr: false }
+)
+```
+
+### Vite / other bundlers
+
+```tsx
+import { FlowGradient } from 'dazineui'
+```
 
 ---
 
 ## HARD RULES — follow always, no exceptions
 
 1. **Never write CSS keyframes** for hero or feature-level visual effects. Use a primitive.
-2. **Never write custom GLSL** unless the user explicitly requests custom shader work by name.
-3. **Never use `MeshStandardMaterial` with default settings** for hero 3D — tune deliberately or use `MeshPhysicalMaterial`.
+2. **Never write custom GLSL** unless the user explicitly requests it by name.
+3. **Never use `MeshStandardMaterial` with defaults** for hero 3D — tune deliberately or use `MeshPhysicalMaterial`.
 4. **Never hardcode proprietary fonts** (Söhne, GT America, Founders Grotesk, NB International, SF Pro outside Apple).
-5. **Never use office/system fonts** (Arial, Helvetica, Times New Roman, Georgia, Calibri) for display/hero typography.
-6. **Always add post-processing** (bloom, tonemapping, vignette) to any R3F hero scene.
+5. **Never use office/system fonts** (Arial, Helvetica, Times New Roman, Georgia) for display/hero typography.
+6. **Always add post-processing** (Bloom, tonemapping) to any R3F hero scene.
 7. **Always respect `prefers-reduced-motion`** — every animation must degrade gracefully.
-8. **Never reimplement a primitive inline** if it already exists in this library.
-9. **Always prefer design tokens** over ad-hoc color/timing values.
+8. **Never reimplement a primitive inline** if it already exists.
+9. **Never use `filter: blur` as the core visual ingredient.** Glow = emissive material + Bloom.
+10. **Use `THREE.AdditiveBlending`** for overlapping colored geometry on dark backgrounds.
 
 ---
 
 ## DECISION FLOW — when the user asks for visual design or motion
 
-Run this in order, every time:
-
-1. **Check for DESIGN.md** in the project root. Parse color tokens, typography, spacing, motion timing. If not found, use aesthetic defaults below.
-2. **Read `~/.claude/skills/dazineui/MANIFEST.md`** to see all available primitives and their descriptors.
-3. **If a screenshot was provided**, describe what you see (palette, motion character, layout rhythm) then match to MANIFEST descriptors.
-4. **Choose the closest primitive** (or minimal composition of two primitives max).
-5. **Inject** the primitive into the project using `~/.claude/skills/dazineui/bin/inject <primitive-name> <target-dir>`. This copies the component source and installs its npm dependencies.
-6. **Configure via props and presets** — typed props first, tokens second, ad-hoc values last.
-7. **If no primitive fits**, generate new code anchored to the patterns in `primitives/` — same camera, lighting, and post-processing conventions.
+1. **Check for `DESIGN.md`** in project root. Parse color tokens, typography, spacing, motion timing.
+2. **Read `MANIFEST.md`** at `~/.claude/skills/dazineui/MANIFEST.md` to see all primitives.
+3. **If screenshot provided**, describe palette, motion character, layout rhythm → match to MANIFEST.
+4. **Choose the closest primitive** (or minimal two-primitive composition).
+5. **Import from `dazineui`** and configure via typed props + presets.
+6. **In Next.js**, wrap with `dynamic(..., { ssr: false })`.
+7. **If no primitive fits**, generate new code at senior level: real geometry, tuned materials, custom shader.
 
 ---
 
-## AESTHETIC DEFAULTS — use when DESIGN.md is absent or silent
+## AESTHETIC DEFAULTS
 
 | Property | Default |
 |---|---|
@@ -71,98 +96,49 @@ Run this in order, every time:
 | Micro-interaction timing | 200ms – 300ms |
 | Easing | `cubic-bezier(0.32, 0.72, 0, 1)` |
 | Spacing base | 4px |
-| Border radius | 8px / 12px / 16px / 24px |
+| Border radius | 8 / 12 / 16 / 24px |
 | Display font | Geist Sans |
 | Mono font | Geist Mono |
-| Fallback font | Inter |
-
-When uncertain: choose subtle and premium over loud and novelty.
+| Fallback | Inter |
 
 ---
 
 ## VAGUE PROMPT ROUTING
 
-Map ambiguous language to concrete primitives:
-
 | User says | Use |
 |---|---|
-| "make it pop" / "feel premium" | `FlowGradient` (background) + `InteractiveText` (headline) |
-| "cool background" | `FlowGradient` with a preset matching project palette |
-| "add animation here" — text section | `InteractiveText` |
-| "add animation here" — card/link section | `MagneticCursor` + stagger reveals |
-| "add animation here" — hero section | `HeroScene` |
-| "more dynamic" | `ScrollScene` if scroll room exists, else hover motion |
-| "ambient texture" / "background interest" | `ParticleField` |
-| "3D hero" / "cinematic hero" | `HeroScene` |
-| "like Stripe" / "like Linear" / "like Vercel" | `FlowGradient` (aurora or electric preset) |
-| "like Anthropic" / "like OpenAI hero" | `HeroScene` (gradient-orb preset) |
-
----
-
-## ANTI-PATTERNS — never produce these
-
-- Blanket `motion.div` fade-ins as the default animation choice
-- `hover:scale-105` as a substitute for real motion design
-- `transition: all` on any CSS property
-- Generic spinner or pulse effects as filler movement
-- Plain unstyled sphere/cube as a 3D hero element
-- Default Three.js tutorial lighting (flat gray result)
-- System fonts as display/hero typography
-
----
-
-## INJECTING PRIMITIVES INTO A PROJECT
-
-When you've identified the right primitive, run:
-
-```bash
-~/.claude/skills/dazineui/bin/inject <primitive-name> <target-directory>
-```
-
-Example:
-```bash
-~/.claude/skills/dazineui/bin/inject flow-gradient ./components/ui
-```
-
-This copies the primitive source into `<target-directory>/flow-gradient/` and
-installs the required npm dependencies. After injection, import and use normally:
-
-```tsx
-import { FlowGradient } from './components/ui/flow-gradient'
-```
-
-If the user is working in this repo (the dazineui source), import from primitives/ directly:
-
-```tsx
-import { FlowGradient } from '@/primitives/flow-gradient'
-```
-
----
-
-## SSR / NEXT.JS NOTES
-
-All R3F primitives (HeroScene, ScrollScene, FlowGradient, ParticleField) must be
-dynamically imported with `ssr: false` in Next.js App Router:
-
-```tsx
-import dynamic from 'next/dynamic'
-const HeroScene = dynamic(() => import('./components/ui/hero-scene'), { ssr: false })
-```
-
-DOM-only primitives (MagneticCursor, InteractiveText) can be imported normally but
-require `'use client'` at the top of any component that uses them.
+| "make it pop" / "feel premium" / "Stripe-style" | `FlowGradient preset="stripe"` |
+| "neon" / "glowing tubes" / "Linear-style" | `SpotlightGradient` |
+| "flow field" / "generative art" / "organic particles" | `NoiseGradient` |
+| "dot matrix" / "wave particles" / "aurora" / "AI aesthetic" | `AuroraGradient` |
+| "fine lines" / "thread texture" / "fiber" / "woven" | `MeshGradient` |
+| "particle grid" / "wave surface" / "Three.js waves" | `WaveGrid` |
+| "cool background" (no context) | `FlowGradient preset="stripe"` |
 
 ---
 
 ## AVAILABLE PRIMITIVES
 
-See `~/.claude/skills/dazineui/MANIFEST.md` for full details on each. Summary:
+See `~/.claude/skills/dazineui/MANIFEST.md` for full details. Summary:
 
-| Primitive | Effect | Category |
+| Primitive | Effect | Import |
 |---|---|---|
-| `FlowGradient` | Animated shader gradient mesh | WebGL / background |
-| `HeroScene` | Full-viewport 3D scene with lighting + post-processing | WebGL / hero |
-| `ScrollScene` | Scroll-pinned 3D transformation | WebGL / scroll |
-| `MagneticCursor` | Spring-physics cursor attraction | DOM / interaction |
-| `InteractiveText` | Scroll-reveal and hover-distortion for headlines | DOM / typography |
-| `ParticleField` | Interactive ambient particle background | WebGL / background |
+| `FlowGradient` | 5 sine-wave ribbon meshes, additive blending | `import { FlowGradient } from 'dazineui'` |
+| `SpotlightGradient` | Neon TubeGeometry + CatmullRom curves + Bloom | `import { SpotlightGradient } from 'dazineui'` |
+| `MeshGradient` | 120 thin bezier fiber streams, Canvas 2D | `import { MeshGradient } from 'dazineui'` |
+| `NoiseGradient` | 2000 flow-field particles, Canvas 2D | `import { NoiseGradient } from 'dazineui'` |
+| `AuroraGradient` | Two dense particle sheets crossing in 3D | `import { AuroraGradient } from 'dazineui'` |
+| `WaveGrid` | 50×50 perspective particle grid, mouse-interactive | `import { WaveGrid } from 'dazineui'` |
+
+---
+
+## ANTI-PATTERNS — never produce these
+
+- Blanket `motion.div` fade-ins as default animation
+- `hover:scale-105` as motion design substitute
+- `transition: all` on CSS properties
+- Generic spinner / pulse effects as filler
+- Plain unstyled sphere/cube as 3D hero element
+- Default Three.js tutorial lighting (flat gray result)
+- System fonts as display/hero typography
+- `filter: blur` as the primary glow technique

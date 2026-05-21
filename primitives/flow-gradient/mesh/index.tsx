@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
+import { useReducedMotion } from '../../../lib/hooks/use-reduced-motion';
 import type { MeshGradientProps } from './types';
 import { MESH_GRADIENT_PRESETS } from './presets';
 

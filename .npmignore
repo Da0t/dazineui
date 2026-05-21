@@ -1,0 +1,29 @@
+# Demo app — not part of the npm package
+app/
+.next/
+public/
+
+# Config files for local development only
+next.config.ts
+next-env.d.ts
+postcss.config.mjs
+eslint.config.mjs
+tailwind.config.*
+tsconfig.tsbuildinfo
+
+# Unused lib directories (tokens, shaders — not consumed by published package)
+lib/shaders/
+lib/tokens/
+lib/hooks/use-mouse.ts
+lib/hooks/use-scroll-progress.ts
+
+# Dev artifacts
+node_modules/
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# Docs that are repo-internal
+BRIEF.md
+DOCS.md
+AGENTS.md

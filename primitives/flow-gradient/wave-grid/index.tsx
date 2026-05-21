@@ -3,7 +3,7 @@
 import { useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
+import { useReducedMotion } from '../../../lib/hooks/use-reduced-motion';
 import type { WaveGridProps } from './types';
 import { WAVE_GRID_PRESETS } from './presets';
 

@@ -3,7 +3,7 @@
 import { useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
+import { useReducedMotion } from '../../../lib/hooks/use-reduced-motion';
 import type { FlowGradientProps } from './types';
 import { FLOW_GRADIENT_PRESETS } from './presets';
 

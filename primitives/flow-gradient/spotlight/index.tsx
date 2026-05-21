@@ -4,7 +4,7 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
+import { useReducedMotion } from '../../../lib/hooks/use-reduced-motion';
 import type { SpotlightGradientProps } from './types';
 import { SPOTLIGHT_GRADIENT_PRESETS } from './presets';
 
