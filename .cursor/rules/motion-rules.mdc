@@ -48,12 +48,17 @@ When uncertain, choose subtle, premium motion over loud, novelty animation.
 
 ## 4) Vague Prompt Routing (Ambiguous User Language)
 
-- "Make it pop" / "Feel premium" -> `FlowGradient` background + `InteractiveText` headline treatment.
-- "Add animation here" -> text-heavy: `InteractiveText`; card/link-heavy: `MagneticCursor` + tasteful stagger; hero: `HeroScene`.
-- "Cool background" -> `FlowGradient` preset matching project palette/tokens.
-- "More dynamic" -> `ScrollScene` when scroll storytelling fits; otherwise enhance existing interactions with tasteful hover/motion upgrades.
+- "Make it pop" / "Stripe-style" / "Feel premium" → `FlowGradient preset="stripe"` — wave ribbons
+- "Neon" / "Glowing tubes" / "Linear-style" → `SpotlightGradient` — emissive tubes + Bloom
+- "Flow field" / "Generative art" / "Organic particle streams" → `NoiseGradient`
+- "Dot matrix" / "Aurora" / "Wave particles" / "AI aesthetic" → `AuroraGradient`
+- "Fine lines" / "Thread texture" / "Fiber" / "Woven" → `MeshGradient`
+- "Cool background" (no context) → `FlowGradient preset="stripe"` (safe default)
+- "Organic sphere" / "Morphing ball" / "AI orb" → `MorphOrb` (planned)
+- "Crystal" / "Glass" / "Gem" / "Refraction" → `CrystalShard` (planned)
 
-Prefer explicit primitive mapping over generic animation snippets.
+Prefer explicit primitive mapping. When writing new primitives from scratch: real
+geometry, tuned materials, custom GLSL. Never blur as the core visual ingredient.
 
 ## 5) Anti-Patterns and Explicit Prohibitions
 

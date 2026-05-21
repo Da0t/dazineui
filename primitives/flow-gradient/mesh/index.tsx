@@ -5,56 +5,28 @@ import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 import type { MeshGradientProps } from './types';
 import { MESH_GRADIENT_PRESETS } from './presets';
 
-interface ControlPoint {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  color: [number, number, number];
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
-
-function bilinearColor(
-  c00: [number, number, number],
-  c10: [number, number, number],
-  c01: [number, number, number],
-  c11: [number, number, number],
-  tx: number,
-  ty: number,
-): [number, number, number] {
-  return [
-    Math.round(lerp(lerp(c00[0], c10[0], tx), lerp(c01[0], c11[0], tx), ty)),
-    Math.round(lerp(lerp(c00[1], c10[1], tx), lerp(c01[1], c11[1], tx), ty)),
-    Math.round(lerp(lerp(c00[2], c10[2], tx), lerp(c01[2], c11[2], tx), ty)),
-  ];
-}
-
-// Render at a lower resolution and scale up for performance
-const RENDER_SCALE = 0.08;
-
+/**
+ * MeshGradient — Canvas 2D color fiber streams.
+ *
+ * 120 thin cubic bezier curves sweep across the canvas in palette colors.
+ * Each fiber has two slowly-drifting control points, creating an organic
+ * weaving motion. No blur — crisp, hair-thin strokes with alpha variation
+ * for perceptual depth.
+ *
+ * Technique: each fiber is a single bezierCurveTo call. Control point
+ * velocities are tiny and reverse when hitting canvas bounds, ensuring
+ * the animation stays fluid indefinitely without resetting.
+ */
 export function MeshGradient({
   preset = 'cosmos',
   colors,
   speed = 1,
-  rows = 3,
-  cols = 3,
   className,
   style,
-  grain = 0.015,
 }: MeshGradientProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
   const rafRef = useRef<number>(0);
-  const pointsRef = useRef<ControlPoint[]>([]);
 
   const resolvedColors = colors ?? MESH_GRADIENT_PRESETS[preset]?.colors ?? MESH_GRADIENT_PRESETS.cosmos.colors;
 
@@ -64,84 +36,118 @@ export function MeshGradient({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const observer = new ResizeObserver(() => {
-      canvas.width = Math.max(1, Math.round(canvas.offsetWidth * RENDER_SCALE));
-      canvas.height = Math.max(1, Math.round(canvas.offsetHeight * RENDER_SCALE));
-      initPoints();
-    });
-    observer.observe(canvas);
+    const FIBER_COUNT = 120;
 
-    function initPoints() {
-      const totalPoints = rows * cols;
-      const palette = resolvedColors.slice(0, totalPoints);
-      // cycle colors if not enough
-      pointsRef.current = Array.from({ length: rows }, (_, row) =>
-        Array.from({ length: cols }, (_, col) => {
-          const idx = (row * cols + col) % palette.length;
-          return {
-            x: col / (cols - 1),
-            y: row / (rows - 1),
-            vx: 0,
-            vy: 0,
-            color: hexToRgb(palette[idx]),
-          } as ControlPoint;
-        }),
-      ).flat();
+    interface Fiber {
+      // Start / end in normalized [0,1] coords — outside edges so lines bleed off canvas
+      x0: number; y0: number;
+      x1: number; y1: number;
+      // Bezier control points (normalized)
+      cx0: number; cy0: number;
+      cx1: number; cy1: number;
+      // Control point drift velocities (tiny per-frame deltas)
+      vcx0: number; vcy0: number;
+      vcx1: number; vcy1: number;
+      color: string;
+      alpha: number;
+      lineWidth: number;
     }
 
-    canvas.width = Math.max(1, Math.round(canvas.offsetWidth * RENDER_SCALE));
-    canvas.height = Math.max(1, Math.round(canvas.offsetHeight * RENDER_SCALE));
-    initPoints();
+    let fibers: Fiber[] = [];
+    let width = 0;
+    let height = 0;
 
-    let lastTime = 0;
+    function initFibers() {
+      fibers = Array.from({ length: FIBER_COUNT }, (_, i) => {
+        const color = resolvedColors[i % resolvedColors.length];
 
-    function draw(ts: number) {
-      const w = canvas!.width;
-      const h = canvas!.height;
-      const dt = Math.min((ts - lastTime) / 1000, 0.05);
-      lastTime = ts;
+        // Alternate orientation: most fibers go left→right, some top→bottom
+        const vertical = i % 5 === 0;
+        const margin = 0.15;
 
-      if (!reduced) {
-        const driftAmp = 0.08 * speed;
-        for (const pt of pointsRef.current) {
-          pt.vx += (Math.random() - 0.5) * 0.002 * speed;
-          pt.vy += (Math.random() - 0.5) * 0.002 * speed;
-          pt.vx *= 0.94;
-          pt.vy *= 0.94;
-          pt.x = Math.max(0, Math.min(1, pt.x + pt.vx * dt * 60 * driftAmp));
-          pt.y = Math.max(0, Math.min(1, pt.y + pt.vy * dt * 60 * driftAmp));
+        let x0, y0, x1, y1;
+        if (vertical) {
+          x0 = -margin + Math.random() * (1 + margin * 2);
+          y0 = -margin;
+          x1 = -margin + Math.random() * (1 + margin * 2);
+          y1 = 1 + margin;
+        } else {
+          x0 = -margin;
+          y0 = Math.random();
+          x1 = 1 + margin;
+          y1 = Math.random();
         }
+
+        // Control points scattered in the interior
+        const cx0 = 0.1 + Math.random() * 0.8;
+        const cy0 = 0.1 + Math.random() * 0.8;
+        const cx1 = 0.1 + Math.random() * 0.8;
+        const cy1 = 0.1 + Math.random() * 0.8;
+
+        // Very slow drift — a complete oscillation takes ~30–90 seconds
+        const drift = 0.00015 * speed;
+        return {
+          x0, y0, x1, y1,
+          cx0, cy0, cx1, cy1,
+          vcx0: (Math.random() - 0.5) * drift,
+          vcy0: (Math.random() - 0.5) * drift,
+          vcx1: (Math.random() - 0.5) * drift,
+          vcy1: (Math.random() - 0.5) * drift,
+          color,
+          alpha: 0.08 + Math.random() * 0.55,
+          lineWidth: 0.3 + Math.random() * 1.4,
+        } as Fiber;
+      });
+    }
+
+    function init(w: number, h: number) {
+      width = w;
+      height = h;
+      canvas!.width = w;
+      canvas!.height = h;
+      initFibers();
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0].contentRect;
+      init(Math.round(rect.width) || 1, Math.round(rect.height) || 1);
+    });
+    observer.observe(canvas);
+    init(canvas.offsetWidth || 800, canvas.offsetHeight || 600);
+
+    function draw() {
+      ctx!.fillStyle = '#06060a';
+      ctx!.fillRect(0, 0, width, height);
+
+      for (const f of fibers) {
+        if (!reduced) {
+          // Drift control points
+          f.cx0 += f.vcx0;
+          f.cy0 += f.vcy0;
+          f.cx1 += f.vcx1;
+          f.cy1 += f.vcy1;
+
+          // Reflect at bounds to keep in [0,1] range
+          if (f.cx0 <= 0 || f.cx0 >= 1) f.vcx0 *= -1;
+          if (f.cy0 <= 0 || f.cy0 >= 1) f.vcy0 *= -1;
+          if (f.cx1 <= 0 || f.cx1 >= 1) f.vcx1 *= -1;
+          if (f.cy1 <= 0 || f.cy1 >= 1) f.vcy1 *= -1;
+        }
+
+        ctx!.globalAlpha = f.alpha;
+        ctx!.strokeStyle = f.color;
+        ctx!.lineWidth = f.lineWidth;
+        ctx!.beginPath();
+        ctx!.moveTo(f.x0 * width, f.y0 * height);
+        ctx!.bezierCurveTo(
+          f.cx0 * width, f.cy0 * height,
+          f.cx1 * width, f.cy1 * height,
+          f.x1 * width, f.y1 * height,
+        );
+        ctx!.stroke();
       }
 
-      const imageData = ctx!.createImageData(w, h);
-      const data = imageData.data;
-
-      for (let py = 0; py < h; py++) {
-        for (let px = 0; px < w; px++) {
-          const nx = px / (w - 1);
-          const ny = py / (h - 1);
-
-          // Find which cell this pixel is in
-          const cellX = Math.min(cols - 2, Math.floor(nx * (cols - 1)));
-          const cellY = Math.min(rows - 2, Math.floor(ny * (rows - 1)));
-          const tx = (nx * (cols - 1)) - cellX;
-          const ty = (ny * (rows - 1)) - cellY;
-
-          const c00 = pointsRef.current[cellY * cols + cellX].color;
-          const c10 = pointsRef.current[cellY * cols + (cellX + 1)].color;
-          const c01 = pointsRef.current[(cellY + 1) * cols + cellX].color;
-          const c11 = pointsRef.current[(cellY + 1) * cols + (cellX + 1)].color;
-
-          const [r, g, b] = bilinearColor(c00, c10, c01, c11, tx, ty);
-          const i = (py * w + px) * 4;
-          data[i] = r;
-          data[i + 1] = g;
-          data[i + 2] = b;
-          data[i + 3] = 255;
-        }
-      }
-
-      ctx!.putImageData(imageData, 0, 0);
+      ctx!.globalAlpha = 1;
       rafRef.current = requestAnimationFrame(draw);
     }
 
@@ -151,7 +157,7 @@ export function MeshGradient({
       cancelAnimationFrame(rafRef.current);
       observer.disconnect();
     };
-  }, [resolvedColors, speed, reduced, rows, cols]);
+  }, [resolvedColors, speed, reduced]);
 
   return (
     <div
@@ -160,28 +166,8 @@ export function MeshGradient({
     >
       <canvas
         ref={canvasRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          // pixelated scaling preserves the smooth mesh look when upscaled from low-res buffer
-          imageRendering: 'auto',
-          filter: 'blur(4px)',
-        }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
-      {grain > 0 && (
-        <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: grain, pointerEvents: 'none' }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <filter id="mg-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#mg-grain)" />
-        </svg>
-      )}
     </div>
   );
 }

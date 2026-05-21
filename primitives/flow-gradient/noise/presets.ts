@@ -1,20 +1,24 @@
 import type { NoiseGradientPreset } from './types';
 
 interface PresetConfig {
-  colors: [string, string, string];
+  colors: string[];
 }
 
 export const NOISE_GRADIENT_PRESETS: Record<NoiseGradientPreset, PresetConfig> = {
   void: {
-    colors: ['#0F0720', '#1A0A3C', '#060D1F'],
+    // Purple / violet / white — generative art classic
+    colors: ['#4c026b', '#730d9e', '#9622c7', '#b44ae0', '#cd72f2', '#ffffff'],
   },
   dusk: {
-    colors: ['#1A0533', '#2D1052', '#0D1B3E'],
+    // Blue / teal / indigo — digital ocean
+    colors: ['#0891b2', '#0d9488', '#6366f1', '#8b5cf6', '#a78bfa', '#38bdf8'],
   },
   forest: {
-    colors: ['#041A0D', '#0A2E16', '#062010'],
+    // Green / emerald / teal — living system
+    colors: ['#065f46', '#059669', '#10b981', '#34d399', '#0d9488', '#6ee7b7'],
   },
   cherry: {
-    colors: ['#1A0010', '#2D0020', '#0F000A'],
+    // Pink / rose / white — blossom
+    colors: ['#be185d', '#db2777', '#ec4899', '#f9a8d4', '#fda4af', '#ffffff'],
   },
 };

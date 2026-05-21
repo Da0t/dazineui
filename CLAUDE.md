@@ -6,7 +6,7 @@ This file defines strict behavior for AI agents working in this project.
 ## 1) Hard Rules (Non-Negotiable)
 
 1. Do not write custom CSS keyframes for hero or feature-level visual motion when a project primitive can satisfy the request.
-2. Do not write custom GLSL unless the user explicitly asks for custom shader work.
+2. Do not write custom GLSL unless the user explicitly asks for custom shader work **or no existing primitive covers the need**.
 3. Do not use `MeshStandardMaterial` with default settings for hero-grade 3D visuals; tune materials deliberately, and prefer `MeshPhysicalMaterial` where appropriate.
 4. Do not hardcode proprietary display fonts (for example: Söhne, GT America, Founders Grotesk, NB International, SF Pro where platform use is not explicit).
 5. Do not use office/system display fonts (`Arial`, `Helvetica`, `Times New Roman`, `Georgia`, `Calibri`) for premium-facing hero/UI typography.
@@ -14,6 +14,9 @@ This file defines strict behavior for AI agents working in this project.
 7. Always respect reduced-motion accessibility (`prefers-reduced-motion`) for any animation.
 8. Do not replace primitive usage with ad-hoc inline animation code when an existing primitive covers the need.
 9. Keep implementations token-aware: prefer design tokens over ad-hoc colors/timing values.
+10. **Never use `filter: blur` as the primary visual ingredient.** Glow must come from HDR-emissive materials + Bloom postprocessing. Blur is allowed only as a finishing pass, never as the core effect.
+11. **Use `THREE.AdditiveBlending`** for any overlapping colored geometry on dark backgrounds (neon, glow, ribbon, particle effects). This is how real light mixes.
+12. When writing new primitives from scratch: use real geometry (PlaneGeometry, TubeGeometry, Points, IcosahedronGeometry) — not CSS pseudo-elements or SVG filters dressed as 3D.
 
 ## 2) Decision Flow (When User Requests Visual Design or Motion)
 
@@ -47,21 +50,33 @@ When uncertain, choose subtle, premium motion over loud, novelty animation.
 
 Map vague requests using this routing:
 
-- "Make it pop" / "Feel premium"  
-  -> Use `FlowGradient` for background energy + `InteractiveText` for headline treatment.
+- "Make it pop" / "Feel premium" / "Stripe-style"
+  → `FlowGradient preset="stripe"` — wave ribbons, high energy color
 
-- "Add animation here"  
-  -> Text-heavy section: `InteractiveText`  
-  -> Card/link-heavy section: `MagneticCursor` + tasteful stagger reveals  
-  -> Hero section: `HeroScene`
+- "Neon" / "Glowing tubes" / "Cyberpunk" / "Linear-style"
+  → `SpotlightGradient` — real emissive neon tubes with Bloom
 
-- "Cool background"  
-  -> Use `FlowGradient` with a preset that matches project palette/tokens.
+- "Flow field" / "Generative art" / "Particle streams" / "Organic flowing"
+  → `NoiseGradient` — sin+cos particle flow field
 
-- "More dynamic"  
-  -> If scroll storytelling fits, use `ScrollScene`; otherwise enhance existing interactions with tasteful hover/motion upgrades.
+- "Dot matrix" / "Wave particles" / "Aurora" / "LED grid" / "AI aesthetic"
+  → `AuroraGradient` — crisp point-circle particle wave bands
+
+- "Fine lines" / "Thread texture" / "Woven" / "Fiber"
+  → `MeshGradient` — 120 thin bezier fiber curves
+
+- "Cool background" (no other context)
+  → `FlowGradient preset="stripe"` — safe default with strong presence
+
+- "Organic sphere" / "Morphing ball" / "AI orb" / "Living shape"
+  → MorphOrb *(planned)* — fBm-displaced sphere, transmission material
+
+- "Crystal" / "Glass shard" / "Gem" / "Refraction"
+  → CrystalShard *(planned)* — transmission + IOR geometry
 
 Prefer explicit primitive mapping over generic animation snippets.
+When no primitive covers the request exactly, write original work at senior level:
+real geometry, tuned materials, custom shader logic.
 
 ## 5) Anti-Patterns and Explicit Prohibitions
 

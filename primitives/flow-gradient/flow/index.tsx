@@ -1,25 +1,151 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 import type { FlowGradientProps } from './types';
 import { FLOW_GRADIENT_PRESETS } from './presets';
 
-interface Orb {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  targetX: number;
-  targetY: number;
-  r: number;
+/**
+ * FlowGradient — R3F diagonal wave ribbons.
+ *
+ * Five PlaneGeometry meshes rotated 35° around Z, each using a ShaderMaterial
+ * whose vertex shader displaces the ribbon along Z with a sine wave:
+ *   pos.z += amplitude · sin(pos.x · frequency + time · waveSpeed + phase)
+ *
+ * THREE.AdditiveBlending causes overlapping ribbons to mix their colors
+ * naturally, creating rich chromatic intersections without any blur.
+ * Each ribbon has independent wave frequency, amplitude, phase, and speed.
+ *
+ * API: preset, colors, speed, grain (grain prop accepted, not rendered —
+ * blur-free by design), className, style.
+ */
+
+const ROTATION_Z  = Math.PI * 35 / 180;   // 35° tilt
+const RIBBON_W    = 22;                    // world units — extends past viewport
+const RIBBON_H    = 0.42;                  // band thickness
+const RIBBON_SEGS = 128;                   // path vertices for smooth sine
+
+const vertexShader = /* glsl */ `
+  uniform float uTime;
+  uniform float uWaveSpeed;
+  uniform float uAmplitude;
+  uniform float uFrequency;
+  uniform float uPhase;
+
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+
+    // Sine wave displacement along Z — ribbon undulates in depth
+    float wave = sin(pos.x * uFrequency + uTime * uWaveSpeed + uPhase)
+               + 0.4 * sin(pos.x * uFrequency * 1.8 + uTime * uWaveSpeed * 0.6 + uPhase + 1.0);
+    pos.z += wave * uAmplitude;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+const fragmentShader = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uOpacity;
+
+  varying vec2 vUv;
+
+  void main() {
+    // Smooth alpha falloff from ribbon center → edges
+    float edge  = abs(vUv.y - 0.5) * 2.0;        // 0 = center, 1 = edge
+    float alpha = smoothstep(1.0, 0.20, edge) * uOpacity;
+
+    // Soft fade at the ribbon's horizontal ends
+    float ends  = smoothstep(0.0, 0.06, vUv.x) * smoothstep(1.0, 0.94, vUv.x);
+    alpha *= ends;
+
+    gl_FragColor = vec4(uColor, alpha);
+  }
+`;
+
+interface RibbonProps {
   color: string;
+  yOffset: number;
+  phaseOffset: number;
+  amplitude: number;
+  frequency: number;
+  waveSpeed: number;
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+function Ribbon({ color, yOffset, phaseOffset, amplitude, frequency, waveSpeed }: RibbonProps) {
+  const matRef = useRef<THREE.ShaderMaterial>(null);
+  const reduced = useReducedMotion();
+
+  // Stable uniform object — mutated directly; never triggers re-render
+  const uniforms = useRef({
+    uTime:      { value: 0 },
+    uWaveSpeed: { value: waveSpeed },
+    uAmplitude: { value: amplitude },
+    uFrequency: { value: frequency },
+    uPhase:     { value: phaseOffset },
+    uColor:     { value: new THREE.Color(color) },
+    uOpacity:   { value: 0.78 },
+  });
+
+  // Sync prop changes (color, speed) into the uniform object
+  useEffect(() => {
+    uniforms.current.uColor.value.set(color);
+    uniforms.current.uWaveSpeed.value = waveSpeed;
+  }, [color, waveSpeed]);
+
+  useFrame((state) => {
+    if (reduced || !matRef.current) return;
+    matRef.current.uniforms.uTime.value = state.clock.getElapsedTime();
+  });
+
+  return (
+    <mesh position={[0, yOffset, 0]} rotation={[0, 0, ROTATION_Z]}>
+      <planeGeometry args={[RIBBON_W, RIBBON_H, RIBBON_SEGS, 1]} />
+      <shaderMaterial
+        ref={matRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms.current}
+        transparent
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function RibbonScene({ colors, speed }: { colors: string[]; speed: number }) {
+  const { viewport } = useThree();
+
+  // Ensure exactly 5 colors
+  const palette = [...colors];
+  while (palette.length < 5) palette.push(palette[palette.length - 1] ?? '#7C3AED');
+  const five = palette.slice(0, 5);
+
+  // Spread ribbons evenly across the vertical viewport
+  const spread = viewport.height * 0.82;
+
+  return (
+    <>
+      {five.map((color, i) => (
+        <Ribbon
+          key={i}
+          color={color}
+          yOffset={(i / (five.length - 1) - 0.5) * spread}
+          phaseOffset={i * ((Math.PI * 2) / five.length)}
+          amplitude={0.24 + i * 0.04}
+          frequency={0.68 + i * 0.17}
+          waveSpeed={speed * (0.38 + i * 0.1)}
+        />
+      ))}
+    </>
+  );
 }
 
 export function FlowGradient({
@@ -28,129 +154,22 @@ export function FlowGradient({
   speed = 1,
   className,
   style,
-  grain = 0.015,
 }: FlowGradientProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const reduced = useReducedMotion();
-  const rafRef = useRef<number>(0);
-  const orbsRef = useRef<Orb[]>([]);
-
   const resolvedColors = colors ?? FLOW_GRADIENT_PRESETS[preset]?.colors ?? FLOW_GRADIENT_PRESETS.stripe.colors;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      initOrbs();
-    });
-    resizeObserver.observe(canvas);
-
-    function initOrbs() {
-      const w = canvas!.width;
-      const h = canvas!.height;
-      orbsRef.current = resolvedColors.map((color) => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: 0,
-        vy: 0,
-        targetX: Math.random() * w,
-        targetY: Math.random() * h,
-        r: Math.min(w, h) * (0.35 + Math.random() * 0.25),
-        color,
-      }));
-    }
-
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    initOrbs();
-
-    let lastTime = 0;
-
-    function draw(ts: number) {
-      const w = canvas!.width;
-      const h = canvas!.height;
-      const dt = Math.min((ts - lastTime) / 1000, 0.05);
-      lastTime = ts;
-
-      ctx!.clearRect(0, 0, w, h);
-      ctx!.fillStyle = '#08080C';
-      ctx!.fillRect(0, 0, w, h);
-
-      const orbs = orbsRef.current;
-      for (const orb of orbs) {
-        if (!reduced) {
-          const driftSpeed = 0.6 * speed;
-          orb.vx += (orb.targetX - orb.x) * 0.003 * driftSpeed;
-          orb.vy += (orb.targetY - orb.y) * 0.003 * driftSpeed;
-          orb.vx *= 0.96;
-          orb.vy *= 0.96;
-          orb.x += orb.vx * dt * 60;
-          orb.y += orb.vy * dt * 60;
-
-          if (Math.abs(orb.x - orb.targetX) < 2 && Math.abs(orb.y - orb.targetY) < 2) {
-            orb.targetX = Math.random() * w;
-            orb.targetY = Math.random() * h;
-          }
-        }
-
-        const [r, g, b] = hexToRgb(orb.color);
-        const grad = ctx!.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.r);
-        grad.addColorStop(0, `rgba(${r},${g},${b},0.72)`);
-        grad.addColorStop(0.4, `rgba(${r},${g},${b},0.28)`);
-        grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-
-        ctx!.globalCompositeOperation = 'screen';
-        ctx!.fillStyle = grad;
-        ctx!.beginPath();
-        ctx!.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
-        ctx!.fill();
-      }
-
-      ctx!.globalCompositeOperation = 'source-over';
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    rafRef.current = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      resizeObserver.disconnect();
-    };
-  }, [resolvedColors, speed, reduced]);
 
   return (
     <div
       className={className}
       style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', ...style }}
     >
-      {/* The blur on the canvas is the core of the Stripe look — without it, just colored circles */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          inset: '-20%',
-          width: '140%',
-          height: '140%',
-          filter: 'blur(80px)',
-        }}
-      />
-      {grain > 0 && (
-        <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: grain, pointerEvents: 'none' }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <filter id="fg-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#fg-grain)" />
-        </svg>
-      )}
+      <Canvas
+        camera={{ position: [0, 0, 5], fov: 60, near: 0.1, far: 100 }}
+        gl={{ antialias: true, alpha: false }}
+        dpr={[1, 2]}
+        style={{ position: 'absolute', inset: 0, background: '#06060a' }}
+      >
+        <RibbonScene colors={resolvedColors} speed={speed} />
+      </Canvas>
     </div>
   );
 }

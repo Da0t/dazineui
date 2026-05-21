@@ -4,14 +4,15 @@ export type NoiseGradientPreset = 'void' | 'dusk' | 'forest' | 'cherry';
 
 export interface NoiseGradientProps {
   preset?: NoiseGradientPreset;
-  /** Override gradient colors [from, mid, to] as hex strings. */
-  colors?: [string, string, string];
-  /** Animation speed multiplier. Note: this primitive uses CSS animation, not rAF. */
+  /** Particle palette. Each color is randomly assigned across 2000 flow-field particles. */
+  colors?: string[];
+  /** Animation speed multiplier. 0 = frozen. Defaults to 1. */
   speed?: number;
-  /** SVG turbulence base frequency. Lower = larger blobs. Defaults to 0.006. */
+  /**
+   * Flow-field zoom. Smaller = broader, sweeping curves. Larger = tighter spirals.
+   * Defaults to 0.012.
+   */
   frequency?: number;
-  /** Number of noise octaves. Higher = more detail. Defaults to 4. */
-  octaves?: number;
   className?: string;
   style?: CSSProperties;
 }
