@@ -4,7 +4,7 @@
 # Run once: npx dazineui setup
 #
 # What it does:
-#   1. Copies lib/motion, lib/shaders, lib/hooks, lib/tokens, bin/, SKILL.md, MANIFEST.md
+#   1. Copies primitives/, lib/shaders, lib/hooks, lib/tokens, bin/, SKILL.md, MANIFEST.md
 #      to ~/.claude/skills/dazineui/ (Claude Code global skill directory)
 #   2. Mirrors to ~/.cursor/skills/dazineui/ (Cursor global skill directory)
 #   3. Both directories are read automatically by the AI in every project.
@@ -33,10 +33,15 @@ install_to() {
   cp "$REPO_ROOT/SKILL.md" "$dest/SKILL.md"
   cp "$REPO_ROOT/MANIFEST.md" "$dest/MANIFEST.md"
 
-  # Copy primitive library
-  echo "  → Copying primitives..."
+  # Copy shared library (hooks, tokens, shaders)
+  echo "  → Copying lib..."
   mkdir -p "$dest/lib"
   rsync -a --delete "$REPO_ROOT/lib/" "$dest/lib/"
+
+  # Copy primitives
+  echo "  → Copying primitives..."
+  mkdir -p "$dest/primitives"
+  rsync -a --delete "$REPO_ROOT/primitives/" "$dest/primitives/"
 
   # Copy bin scripts
   echo "  → Copying scripts..."
@@ -70,9 +75,8 @@ echo "  cd your-project"
 echo "  ~/.claude/skills/dazineui/bin/inject flow-gradient ./components/ui"
 echo ""
 echo "Primitives available:"
-for d in "$REPO_ROOT/lib/motion"/*/; do
+for d in "$REPO_ROOT/primitives"/*/; do
   name=$(basename "$d")
-  [ "$name" = ".gitkeep" ] && continue
   echo "  • $name"
 done
 echo ""

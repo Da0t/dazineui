@@ -20,7 +20,7 @@ This file defines strict behavior for AI agents working in this project.
 Follow this sequence in order:
 
 1. Check for `DESIGN.md` in project root and parse/derive usable color, typography, spacing, radius, and motion tokens.
-2. Scan `lib/motion/*/MANIFEST.md` files (when working in this repo) or `~/.claude/skills/dazineui/lib/motion/*/MANIFEST.md` (when working in a user's project) and read descriptors, use-cases, presets, and constraints.
+2. Scan `primitives/*/MANIFEST.md` files (when working in this repo) or `~/.claude/skills/dazineui/primitives/*/MANIFEST.md` (when working in a user's project) and read descriptors, use-cases, presets, and constraints.
 3. If a screenshot/mock reference is provided, describe visible traits first (palette, motion character, layout rhythm, visual hierarchy), then map those traits to manifest descriptors.
 4. Choose the closest matching primitive (or minimal composition of primitives).
 5. Configure via typed props and presets first. Pass DESIGN-driven tokens whenever possible.

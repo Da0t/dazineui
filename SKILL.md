@@ -28,7 +28,7 @@ hand-crafted, mathematically-correct, performance-tuned React components that
 produce high-end visual effects. Use them instead of generating generic animation
 code from scratch.
 
-The primitives live at `~/.claude/skills/dazineui/lib/motion/`. When a user needs
+The primitives live at `~/.claude/skills/dazineui/primitives/`. When a user needs
 a visual effect, inject the matching primitive into their project with the inject
 script, then configure it via props.
 
@@ -58,7 +58,7 @@ Run this in order, every time:
 4. **Choose the closest primitive** (or minimal composition of two primitives max).
 5. **Inject** the primitive into the project using `~/.claude/skills/dazineui/bin/inject <primitive-name> <target-dir>`. This copies the component source and installs its npm dependencies.
 6. **Configure via props and presets** — typed props first, tokens second, ad-hoc values last.
-7. **If no primitive fits**, generate new code anchored to the patterns in `lib/motion/` — same camera, lighting, and post-processing conventions.
+7. **If no primitive fits**, generate new code anchored to the patterns in `primitives/` — same camera, lighting, and post-processing conventions.
 
 ---
 
@@ -131,10 +131,10 @@ installs the required npm dependencies. After injection, import and use normally
 import { FlowGradient } from './components/ui/flow-gradient'
 ```
 
-If the user is working in this repo (the dazineui source), import from lib/motion/ directly:
+If the user is working in this repo (the dazineui source), import from primitives/ directly:
 
 ```tsx
-import { FlowGradient } from '@/lib/motion/flow-gradient'
+import { FlowGradient } from '@/primitives/flow-gradient'
 ```
 
 ---

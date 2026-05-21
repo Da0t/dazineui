@@ -13,13 +13,13 @@ set -e
 PRIMITIVE="${1:-}"
 TARGET_DIR="${2:-./components/ui}"
 SKILL_ROOT="${DAZINEUI_ROOT:-$HOME/.claude/skills/dazineui}"
-PRIMITIVE_SRC="$SKILL_ROOT/lib/motion/$PRIMITIVE"
+PRIMITIVE_SRC="$SKILL_ROOT/primitives/$PRIMITIVE"
 
 if [ -z "$PRIMITIVE" ]; then
   echo "Usage: inject <primitive-name> [target-dir]"
   echo ""
   echo "Available primitives:"
-  for d in "$SKILL_ROOT/lib/motion"/*/; do
+  for d in "$SKILL_ROOT/primitives"/*/; do
     echo "  $(basename "$d")"
   done
   exit 1
@@ -29,7 +29,7 @@ if [ ! -d "$PRIMITIVE_SRC" ]; then
   echo "Error: primitive '$PRIMITIVE' not found at $PRIMITIVE_SRC"
   echo ""
   echo "Available primitives:"
-  for d in "$SKILL_ROOT/lib/motion"/*/; do
+  for d in "$SKILL_ROOT/primitives"/*/; do
     echo "  $(basename "$d")"
   done
   exit 1
